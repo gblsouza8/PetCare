@@ -13,7 +13,7 @@ class VetClinicApp:
     def __init__(self, master):
         self.master = master
         master.title("PetCare - Gestão de Consultas")
-        master.geometry("1280x720") 
+        master.geometry("1280x600") 
         # ESTILO: Fundo cinza claro
         master.configure(bg="#f4f4f5") 
         
@@ -29,8 +29,8 @@ class VetClinicApp:
             self.style.theme_use('default')
         
         # --- CONSTANTES DE COR ---
-        ROXO_PRIMARIO = "#7e22ce" # purple-700
-        ROXO_HOVER = "#6b21a8"   # purple-800
+        ROXO_PRIMARIO = "#4438ca" # purple-700
+        ROXO_HOVER = "#28217a"   # purple-800
         
         self.titulo_cor = ROXO_PRIMARIO
         self.cor_selecao = ROXO_PRIMARIO 
