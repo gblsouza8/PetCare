@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetCare - Clínica Veterinária</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilo customizado para fontes e elementos */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        /* Esconder todas as seções por padrão e mostrar via JS */
+        .page-section { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <header class="bg-indigo-700 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold text-white tracking-wider">PetCare</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="nav-home" class="text-white hover:bg-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition duration-150">Home</button>
+                    <button id="nav-area-cliente" class="text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-md text-sm font-medium transition duration-150 shadow-lg">Área do Cliente</button>
+                    <button id="nav-logout" class="hidden text-red-300 hover:text-red-100 px-3 py-2 rounded-md text-sm font-medium transition duration-150">Sair</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 w-full">
+
+        <div id="notification-area" class="fixed top-20 right-5 z-50"></div>
+        
+        <section id="loading-section" class="page-section p-8 flex items-center justify-center min-h-[300px]">
+             <div class="flex flex-col items-center">
+                <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-4 text-lg font-medium text-indigo-700">Carregando dados...</p>
+            </div>
+        </section>
+
+        <section id="home-section" class="page-section p-8 bg-white shadow-xl rounded-lg">
+            <h1 class="text-4xl font-extrabold text-indigo-700 mb-6 border-b-2 pb-2">Bem-vindo(a) à PetCare</h1>
+            <p class="text-lg text-gray-600 mb-8">Cuidamos dos seus pets pequenos e domésticos com a excelência que eles merecem. Veja nossas especialidades e valores.</p>
+
+            <h2 class="text-3xl font-semibold text-indigo-600 mb-4">Nossas Especialidades e Valores (Estimados)</h2>
+            <div id="especialidades-list" class="space-y-4">
+                <div class="text-gray-500 text-center p-4">Carregando especialidades...</div>
+                </div>
+        </section>
+
+        <section id="auth-section" class="page-section max-w-md mx-auto p-8 bg-white shadow-xl rounded-lg">
+            <h1 class="text-3xl font-bold text-center text-indigo-700 mb-6" id="auth-title">Entrar na Área do Cliente</h1>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="login-email" class="block text-sm font-medium text-gray-700">Email:</label>
+                    <input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="login-senha" class="block text-sm font-medium text-gray-700">Senha:</label>
+                    <input type="password" id="login-senha" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <button type="submit" id="login-submit-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150">Entrar</button>
+            </form>
+
+            <p class="mt-6 text-center text-sm text-gray-600">
+                Novo por aqui?
+                <button id="toggle-cadastro-btn" class="font-medium text-indigo-600 hover:text-indigo-500">
+                    Cadastre-se Agora
+                </button>
+            </p>
+
+            <form id="cadastro-form" class="space-y-4 mt-8 hidden">
+                <h2 class="text-xl font-semibold text-indigo-700 mb-4 border-t pt-4">Novo Cadastro</h2>
+                <div>
+                    <label for="cadastro-nome" class="block text-sm font-medium text-gray-700">Nome Completo:</label>
+                    <input type="text" id="cadastro-nome" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="cadastro-cpf" class="block text-sm font-medium text-gray-700">CPF (apenas números):</label>
+                    <input type="text" id="cadastro-cpf" required maxlength="11" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="cadastro-email" class="block text-sm font-medium text-gray-700">Email:</label>
+                    <input type="email" id="cadastro-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="cadastro-telefone" class="block text-sm font-medium text-gray-700">Telefone (DDD + Número):</label>
+                    <input type="tel" id="cadastro-telefone" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="cadastro-senha" class="block text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres):</label>
+                    <input type="password" id="cadastro-senha" required minlength="6" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <button type="submit" id="cadastro-submit-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition duration-150">Confirmar Cadastro</button>
+            </form>
+        </section>
+
+        <section id="dashboard-section" class="page-section p-8 bg-white shadow-xl rounded-lg">
+            <h1 class="text-4xl font-extrabold text-indigo-700 mb-6">Olá, <span id="tutor-nome-display">Cliente!</span></h1>
+            
+            <div id="complete-profile-container" class="mb-8 p-6 bg-red-50 border border-red-300 rounded-lg shadow-md hidden">
+                <h2 class="text-2xl font-bold text-red-700 mb-3">⚠️ Cadastro Incompleto</h2>
+                <p class="text-red-600 mb-4">Seus dados pessoais não foram finalizados. Por favor, complete as informações abaixo para acessar todos os recursos da clínica.</p>
+                <form id="complete-profile-form" class="space-y-4">
+                    <div>
+                        <label for="complete-nome" class="block text-sm font-medium text-gray-700">Nome Completo:</label>
+                        <input type="text" id="complete-nome" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div>
+                        <label for="complete-cpf" class="block text-sm font-medium text-gray-700">CPF (apenas números):</label>
+                        <input type="text" id="complete-cpf" required maxlength="11" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div>
+                        <label for="complete-telefone" class="block text-sm font-medium text-gray-700">Telefone (DDD + Número):</label>
+                        <input type="tel" id="complete-telefone" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <button type="submit" id="complete-profile-submit-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
+                        Finalizar Cadastro
+                    </button>
+                </form>
+            </div>
+            
+            <div id="dashboard-content">
+                <p class="text-lg text-gray-600 mb-8">Gerencie seus pets e consultas.</p>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-blue-100 p-4 rounded-lg shadow-md hover:shadow-lg transition duration-300">
+                        <h2 class="text-xl font-semibold text-blue-800 mb-2">Seus Dados</h2>
+                        <p class="text-blue-600 text-sm mb-4">Atualize suas informações pessoais.</p>
+                        <button id="show-edit-profile" class="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700">Editar Perfil</button>
+                    </div>
+                    
+                    <div class="bg-pink-100 p-4 rounded-lg shadow-md hover:shadow-lg transition duration-300">
+                        <h2 class="text-xl font-semibold text-pink-800 mb-2">Gerenciar Pets</h2>
+                        <p class="text-pink-600 text-sm mb-4">Edite, exclua e veja detalhes dos seus pets.</p>
+                        <button id="show-gerenciar-pets" class="w-full py-2 px-4 bg-pink-600 text-white rounded-md hover:bg-pink-700">Gerenciar</button>
+                    </div>
+
+                    <div class="bg-indigo-100 p-4 rounded-lg shadow-md hover:shadow-lg transition duration-300">
+                        <h2 class="text-xl font-semibold text-indigo-800 mb-2">Cadastrar Novo Pet</h2>
+                        <p class="text-indigo-600 text-sm mb-4">Adicione um novo companheiro à sua conta.</p>
+                        <button id="show-cadastro-pet" class="w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Novo Pet</button>
+                    </div>
+
+                    <div class="bg-green-100 p-4 rounded-lg shadow-md hover:shadow-lg transition duration-300">
+                        <h2 class="text-xl font-semibold text-green-800 mb-2">Agendar Consulta</h2>
+                        <p class="text-green-600 text-sm mb-4">Escolha a especialidade, data e horário.</p>
+                        <button id="show-agendar-consulta" class="w-full py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700">Agendar</button>
+                    </div>
+
+                    <div class="bg-gray-100 p-4 rounded-lg shadow-md hover:shadow-lg transition duration-300">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-2">Histórico</h2>
+                        <p class="text-gray-600 text-sm mb-4">Visualize consultas passadas e relatórios médicos.</p>
+                        <button id="show-historico" class="w-full py-2 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700">Histórico</button>
+                    </div>
+                    
+                    <div class="bg-red-100 p-4 rounded-lg shadow-md hover:shadow-lg transition duration-300">
+                        <h2 class="text-xl font-semibold text-red-800 mb-2">Encerrar Sessão</h2>
+                        <p class="text-red-600 text-sm mb-4">Saia com segurança da sua conta.</p>
+                        <button id="dashboard-logout-btn" class="w-full py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700">Sair Agora</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="edit-profile-section" class="page-section max-w-md mx-auto p-8 bg-white shadow-xl rounded-lg">
+            <h1 class="text-3xl font-bold text-indigo-700 mb-6">Editar Perfil</h1>
+            <form id="edit-profile-form" class="space-y-4">
+                <div>
+                    <label for="edit-nome" class="block text-sm font-medium text-gray-700">Nome Completo:</label>
+                    <input type="text" id="edit-nome" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="edit-cpf" class="block text-sm font-medium text-gray-700">CPF (não pode ser alterado):</label>
+                    <input type="text" id="edit-cpf" required maxlength="11" disabled class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md shadow-sm cursor-not-allowed">
+                </div>
+                <div>
+                    <label for="edit-telefone" class="block text-sm font-medium text-gray-700">Telefone (DDD + Número):</label>
+                    <input type="tel" id="edit-telefone" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <button type="submit" id="edit-profile-submit-btn" class="w-full py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150">Salvar Alterações</button>
+            </form>
+            <button id="back-to-dashboard-edit" class="mt-4 text-sm text-gray-500 hover:text-indigo-600">Voltar para o Dashboard</button>
+        </section>
+
+        <section id="gerenciar-pets-section" class="page-section p-8 bg-white shadow-xl rounded-lg">
+            <h1 class="text-3xl font-bold text-pink-700 mb-6 border-b-2 pb-2">Gerenciar Seus Pets</h1>
+            
+            <div id="pets-list-container" class="space-y-4 mb-8">
+                <p class="text-gray-500">Carregando seus pets...</p>
+            </div>
+
+            <button id="show-cadastro-pet-from-gerenciar" class="w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-150">
+                Cadastrar Novo Pet
+            </button>
+            
+            <button id="back-to-dashboard-gerenciar" class="mt-6 text-sm text-gray-500 hover:text-indigo-600">Voltar para o Dashboard</button>
+        </section>
+        
+        <section id="cadastro-pet-section" class="page-section max-w-md mx-auto p-8 bg-white shadow-xl rounded-lg">
+            <h1 class="text-3xl font-bold text-indigo-700 mb-6" id="pet-form-title">Cadastro de Pet</h1>
+            <form id="cadastro-pet-form" class="space-y-4">
+                <input type="hidden" id="pet-id-edit">
+                <div>
+                    <label for="pet-nome" class="block text-sm font-medium text-gray-700">Nome do Pet:</label>
+                    <input type="text" id="pet-nome" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="pet-especie" class="block text-sm font-medium text-gray-700">Espécie:</label>
+                    <select id="pet-especie" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                        <option value="">Selecione a Espécie</option>
+                        <option value="Cachorro">Cachorro</option>
+                        <option value="Gato">Gato</option>
+                        <option value="Pássaro">Pássaro</option>
+                        <option value="Roedor">Roedor (Hamster, Porquinho-da-Índia, etc.)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="pet-raca" class="block text-sm font-medium text-gray-700">Raça:</label>
+                    <select id="pet-raca" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                        <option value="">Selecione a Espécie Primeiro</option>
+                    </select>
+                </div>
+                <div id="pet-nascimento-container">
+                    <label for="pet-nascimento" class="block text-sm font-medium text-gray-700">Data de Nascimento:</label>
+                    <input type="date" id="pet-nascimento" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <button type="submit" id="cadastro-pet-submit-btn" class="w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-150">Salvar Pet</button>
+            </form>
+            <button id="back-to-dashboard-pet" class="mt-4 text-sm text-gray-500 hover:text-indigo-600">Voltar para o Dashboard</button>
+        </section>
+
+        <section id="agendar-consulta-section" class="page-section p-8 bg-white shadow-xl rounded-lg">
+            <h1 class="text-3xl font-bold text-indigo-700 mb-6">Agendamento de Consulta</h1>
+
+            <div id="pets-list-to-agenda" class="mb-6 space-y-3">
+                <h2 class="text-xl font-semibold text-gray-700">Seus Pets Cadastrados:</h2>
+                <div id="pets-options-container" class="space-y-2">
+                    <p class="text-gray-500">Carregando seus pets...</p>
+                </div>
+            </div>
+
+            <div id="agendamento-form-container" class="hidden border-t pt-6 mt-6">
+                <h2 class="text-xl font-semibold text-green-700 mb-4">Detalhes do Agendamento</h2>
+
+                <form id="agendamento-consulta-form" class="space-y-4">
+                    <input type="hidden" id="selected-pet-id">
+
+                    <div>
+                        <label for="agendar-especialidade" class="block text-sm font-medium text-gray-700">Especialidade:</label>
+                        <select id="agendar-especialidade" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                            <option value="">Selecione a Especialidade</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="agendar-data" class="block text-sm font-medium text-gray-700">Data (Segunda a Sábado):</label>
+                        <input type="date" id="agendar-data" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+
+                    <div>
+                        <label for="agendar-hora" class="block text-sm font-medium text-gray-700">Horário Disponível (06:00h às 20:00h, Intervalo de 1h):</label>
+                        <select id="agendar-hora" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                            <option value="">Selecione a Data Primeiro</option>
+                        </select>
+                    </div>
+
+                    <div id="valor-consulta-display" class="text-lg font-bold text-indigo-700 bg-indigo-100 p-3 rounded-md shadow-inner">
+                        Valor da Consulta: R$ 0.00
+                    </div>
+
+                    <button type="submit" id="finalizar-agendamento-btn" class="w-full py-3 px-4 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition duration-150">
+                        Finalizar Agendamento
+                    </button>
+                </form>
+            </div>
+            <button id="back-to-dashboard-agenda" class="mt-6 text-sm text-gray-500 hover:text-indigo-600">Voltar para o Dashboard</button>
+        </section>
+
+        <section id="historico-section" class="page-section p-8 bg-white shadow-xl rounded-lg">
+            <h1 class="text-3xl font-bold text-indigo-700 mb-6">Histórico de Consultas</h1>
+
+            <div id="historico-list" class="space-y-4">
+                <p class="text-gray-500">Nenhuma consulta encontrada ou carregando...</p>
+            </div>
+
+            <div id="relatorio-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+                <div class="bg-white p-6 rounded-lg shadow-2xl max-w-lg w-full">
+                    <h2 class="text-2xl font-bold text-indigo-700 mb-4">Relatório Médico</h2>
+                    <div id="relatorio-content" class="whitespace-pre-wrap text-gray-700 border p-3 bg-gray-50 rounded-md min-h-20">
+                        </div>
+                    <button id="close-relatorio-modal" class="mt-4 py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700">Fechar</button>
+                </div>
+            </div>
+
+            <button id="back-to-dashboard-historico" class="mt-6 text-sm text-gray-500 hover:text-indigo-600">Voltar para o Dashboard</button>
+        </section>
+
+        <div id="confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+            <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full">
+                <h2 class="text-xl font-bold text-indigo-700 mb-4">Confirmar Agendamento</h2>
+                <p id="confirm-message" class="text-gray-700 mb-6"></p>
+                <div class="flex justify-end space-x-4">
+                    <button id="cancel-agendamento-btn" class="py-2 px-4 bg-red-500 text-white rounded-md hover:bg-red-600">Cancelar</button>
+                    <button id="confirm-agendamento-btn" class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700">Confirmar</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        /*
+         * =========================================================================
+         * INSTRUÇÕES RLS (Row-Level Security) PARA SUPABASE:
+         * (Mantenha as regras RLS como estão)
+         * =========================================================================
+         */
+
+        // =========================================================================
+        // ⚠️ IMPORTANTE: SUBSTITUA ESTAS CHAVES PELAS SUAS CREDENCIAIS REAIS DO SUPABASE.
+        // SE ESTIVER USANDO AS CHAVES DE PLACEHOLDER, AS CHAMADAS VÃO FALHAR E O BOTÃO VAI TRAVAR.
+        const SUPABASE_URL = 'https://jweuedxsfrxjkzkdbkas.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3ZXVlZHhzZnJ4amt6a2Ria2FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0OTA4MDcsImV4cCI6MjA3OTA2NjgwN30.0FnNI4RXLgwE0fkL1HJ9Qgi9hglLtKmdfbuxARrraFs';
+        // =========================================================================
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let tutorData = null; // Armazena os dados do tutor logado
+        let allEspecialidades = [];
+        let allMedicos = [];
+        let appIsReady = false; // NOVA FLAG para controlar o estado de carregamento inicial
+
+        // --- UTILS VALIDAÇÃO DE DATA/HORA ---
+
+        /**
+         * Obtém a data atual no formato YYYY-MM-DD.
+         * @returns {string} Data atual formatada.
+         */
+        function getCurrentDateString() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+            const dd = String(today.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function setMinDate() {
+            // Agendamento de Consulta: Data Mínima (não pode ser passado)
+            const dateInputAgenda = document.getElementById('agendar-data');
+            if (dateInputAgenda) {
+                dateInputAgenda.min = getCurrentDateString();
+            }
+            
+            // LÓGICA REVERSA (CADASTRO PET): Data Máxima (não pode ser futuro)
+            const dateInputPet = document.getElementById('pet-nascimento');
+            if (dateInputPet) {
+                dateInputPet.max = getCurrentDateString(); // <-- Nova linha adicionada
+            }
+        }
+        
+        // --- UTILS UI ---
+        
+        /**
+         * Adiciona um estado de loading/desabilita a um botão.
+         */
+        function setButtonLoading(buttonId, isLoading, defaultText) {
+            const button = document.getElementById(buttonId);
+            if (!button) return;
+            button.disabled = isLoading;
+            button.textContent = isLoading ? 'Aguarde...' : defaultText;
+            button.classList.toggle('opacity-50', isLoading);
+            button.classList.toggle('cursor-not-allowed', isLoading);
+        }
+
+        /**
+         * Exibe uma notificação flutuante.
+         * @param {string} message - Mensagem a ser exibida.
+         * @param {string} type - Tipo da mensagem ('success' ou 'error').
+         */
+        function showNotification(message, type) {
+            const container = document.getElementById('notification-area');
+            const colorClass = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            const html = `
+                <div class="${colorClass} text-white px-4 py-2 rounded-lg shadow-xl mb-3 transition duration-500 transform translate-x-0 opacity-100" role="alert">
+                    ${message}
+                </div>
+            `;
+            const notification = document.createElement('div');
+            notification.innerHTML = html;
+            container.appendChild(notification);
+
+            // Esconde após 5 segundos
+            setTimeout(() => {
+                notification.classList.add('opacity-0', 'translate-x-full');
+                setTimeout(() => notification.remove(), 500);
+            }, 5000);
+        }
+
+        /**
+         * Atualiza a visibilidade dos botões do cabeçalho com base no estado de autenticação.
+         */
+        function updateNavButtons(isLoggedIn) {
+            document.getElementById('nav-logout').classList.toggle('hidden', !isLoggedIn);
+            document.getElementById('nav-area-cliente').classList.toggle('hidden', isLoggedIn);
+        }
+
+        /**
+         * Gerencia a navegação entre as seções
+         * @param {string} sectionId - O ID da seção a ser exibida (ex: 'home-section').
+         */
+        function navigateTo(sectionId) {
+            document.querySelectorAll('.page-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById(sectionId).style.display = 'block';
+
+            // Garante que o estado dos botões de navegação seja sempre atualizado
+            const user = supabase.auth.currentUser;
+            const isLoggedIn = !!user;
+            updateNavButtons(isLoggedIn);
+            
+            // Lógica de exibição condicional do Dashboard
+            if (sectionId === 'dashboard-section') {
+                updateDashboardDisplay();
+            }
+        }
+
+        /**
+         * Função para exibir modal de confirmação (substituindo window.confirm)
+         * @param {string} message - Mensagem de confirmação.
+         * @returns {Promise<boolean>} - Resolve com true se confirmado, false se cancelado.
+         */
+        function showConfirmationModal(message) {
+            return new Promise(resolve => {
+                const modal = document.getElementById('confirm-modal');
+                // Reutiliza o modal de confirmação para exclusão de pets e agendamento
+                document.getElementById('confirm-message').textContent = message;
+
+                modal.classList.remove('hidden');
+
+                const confirmBtn = document.getElementById('confirm-agendamento-btn');
+                const cancelBtn = document.getElementById('cancel-agendamento-btn');
+                
+                // Clona para remover todos os listeners e evitar duplicação de eventos
+                const confirmBtnClone = confirmBtn.cloneNode(true);
+                const cancelBtnClone = cancelBtn.cloneNode(true);
+                
+                confirmBtn.parentNode.replaceChild(confirmBtnClone, confirmBtn);
+                cancelBtn.parentNode.replaceChild(cancelBtnClone, cancelBtn);
+
+                const handler = (result) => {
+                    modal.classList.add('hidden');
+                    resolve(result);
+                };
+
+                confirmBtnClone.addEventListener('click', () => handler(true));
+                cancelBtnClone.addEventListener('click', () => handler(false));
+            });
+        }
+
+
+        // --- LÓGICA DE AUTENTICAÇÃO E ROTEAMENTO ---
+        
+
+        // Localização: Por volta da linha 290
+        supabase.auth.onAuthStateChange(async (event, session) => {
+            // ESTA PARTE VAI SUMIR: if (!appIsReady) { navigateTo('loading-section'); }
+
+            // Este listener só deve agir após o carregamento inicial (appIsReady)
+            // E quando houver uma MUDANÇA no estado de autenticação (event).
+            if (appIsReady) {
+                if (event === 'SIGNED_IN' && session) {
+                    // Apenas se o evento for um novo login
+                    await loadTutorData(session.user.id);
+                    document.getElementById('tutor-nome-display').textContent = tutorData ? tutorData.nome.split(' ')[0] : 'Cliente';
+                    navigateTo('dashboard-section');
+                } else if (event === 'SIGNED_OUT' || !session) {
+                    // Se deslogou
+                    tutorData = null;
+                    navigateTo('home-section');
+                }
+            }
+        });
+
+        async function loadTutorData(userId) {
+            const { data, error } = await supabase
+                .from('tutores')
+                .select('nome, id, cpf, telefone')
+                .eq('id', userId)
+                .single();
+
+            if (error) {
+                // PGRST116: Nenhum dado encontrado, o que significa perfil incompleto para este Auth ID.
+                if (error.code === 'PGRST116') {
+                    tutorData = null;
+                    return;
+                }
+                
+                console.error("Erro ao carregar dados do tutor:", error); // Debug Log
+                showNotification(`Erro ao carregar seus dados: ${error.message}.`, 'error');
+                tutorData = null;
+                return;
+            }
+
+            tutorData = data;
+        }
+        
+        /**
+         * Atualiza a exibição do Dashboard com base na presença de tutorData.
+         */
+        function updateDashboardDisplay() {
+            const isProfileComplete = !!tutorData;
+            
+            // Se o perfil estiver incompleto, preenche os campos do formulário de conclusão, se possível.
+            if (!isProfileComplete) {
+                 // Preenche com o email do Auth se for o caso
+                const user = supabase.auth.currentUser;
+                if (user && user.email) {
+                    document.getElementById('complete-nome').value = '';
+                    document.getElementById('complete-cpf').value = '';
+                    document.getElementById('complete-telefone').value = '';
+                }
+            }
+
+
+            document.getElementById('complete-profile-container').classList.toggle('hidden', isProfileComplete);
+            document.getElementById('dashboard-content').classList.toggle('hidden', !isProfileComplete);
+            document.getElementById('tutor-nome-display').textContent = tutorData ? tutorData.nome.split(' ')[0] : 'Cliente';
+        }
+
+        // --- LÓGICA DE MANUTENÇÃO DA SESSÃO (HEARTBEAT) ---
+
+        /**
+         * Verifica a sessão atual e recarrega os dados do tutor se necessário.
+         * Esta função atua como um "coração" para re-estabelecer a conexão.
+         */
+        async function sessionHeartbeat() {
+            // Tenta obter a sessão atual (o que pode forçar o refresh do token)
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+                // 1. Se há uma sessão Auth (token válido), mas os dados locais do tutor sumiram, recarrega.
+                if (!tutorData) {
+                    console.log("Heartbeat: Sessão válida, recarregando dados do tutor...");
+                    await loadTutorData(session.user.id);
+                    // 2. Se o usuário está no Dashboard, atualiza a UI caso os dados tenham acabado de ser recarregados
+                    if (document.getElementById('dashboard-section').style.display === 'block') {
+                         updateDashboardDisplay();
+                    }
+                }
+            } else {
+                // 3. Se o heartbeat detectar que a sessão expirou e o listener falhou
+                if (tutorData) {
+                    console.log("Heartbeat: Sessão perdida. Forçando logout local e navegação.");
+                    tutorData = null;
+                    navigateTo('home-section');
+                    showNotification('Sessão expirada. Por favor, faça login novamente.', 'error');
+                }
+            }
+        }
+
+        // NOVO VALOR: 60000 ms (1 minuto) para o Heartbeat.
+        const HEARTBEAT_INTERVAL = 60000; 
+        let heartbeatTimer = null; // Para armazenar o ID do intervalo.
+
+        function startHeartbeat() {
+            if (heartbeatTimer) clearInterval(heartbeatTimer); // Limpa qualquer timer anterior
+            heartbeatTimer = setInterval(sessionHeartbeat, HEARTBEAT_INTERVAL);
+            console.log("Heartbeat da sessão iniciado. Verificação a cada 1 minuto.");
+        }
+        // --- FIM DA LÓGICA DE HEARTBEAT ---
+
+// --- NOVO: LÓGICA DE REFRESH NA VISIBILIDADE (visibilityChange) ---
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                // Força o refresh da página (reload) quando o usuário volta para a aba.
+                console.log("Página visível novamente. Recarregando...");
+                window.location.reload();
+            }
+        });
+
+
+        // --- FUNÇÕES DE CARREGAMENTO DE DADOS INICIAIS ---
+
+        async function loadEspecialidades() {
+            const { data, error } = await supabase
+                .from('especialidades')
+                .select('*')
+                .order('nome', { ascending: true });
+
+            const listContainer = document.getElementById('especialidades-list');
+            listContainer.innerHTML = '';
+
+            if (error) {
+                console.error("Erro ao carregar especialidades:", error); // Debug Log
+                listContainer.innerHTML = `<p class="text-red-500">Erro ao carregar especialidades: ${error.message}</p>`;
+                return [];
+            }
+            
+            allEspecialidades = data; // Armazena globalmente
+            
+            data.forEach(esp => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-4 bg-indigo-50 rounded-lg shadow-sm';
+                item.innerHTML = `
+                    <span class="font-medium text-lg text-indigo-800">${esp.nome}</span>
+                    <span class="font-bold text-xl text-green-700">R$ ${esp.valor.toFixed(2).replace('.', ',')}</span>
+                `;
+                listContainer.appendChild(item);
+            });
+            return data;
+        }
+
+        // --- EVENT LISTENERS E FORMS ---
+
+        // Navegação
+        document.getElementById('nav-home').addEventListener('click', () => navigateTo('home-section'));
+        
+        // CORREÇÃO PRINCIPAL: Lógica do botão "Área do Cliente"
+        document.getElementById('nav-area-cliente').addEventListener('click', async () => {
+            // 1. Força a verificação da sessão, que é assíncrona
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+                // 2. Se a sessão existe, garante que os dados do tutor estão carregados 
+                //    (caso o onAuthStateChange não tenha terminado)
+                if (!tutorData) {
+                    await loadTutorData(session.user.id);
+                }
+                // 3. Vai para o dashboard. O updateDashboardDisplay() tratará o perfil incompleto.
+                navigateTo('dashboard-section'); 
+            } else {
+                // 4. Se não há sessão, vai para a tela de autenticação
+                navigateTo('auth-section');
+            }
+        });
+        
+        // FUNCIONALIDADE SOLICITADA: Botão de Logout (Sair) no Cabeçalho
+        document.getElementById('nav-logout').addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            showNotification('Você saiu da sua conta.', 'success');
+            // O onAuthStateChange cuida de navegar para a home e atualizar os botões.
+        });
+        
+        // FUNCIONALIDADE SOLICITADA: Botão de Logout (Sair) no Dashboard
+        document.getElementById('dashboard-logout-btn').addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            showNotification('Você saiu da sua conta.', 'success');
+            // O onAuthStateChange cuida de navegar para a home e atualizar os botões.
+        });
+
+        // Toggle Cadastro/Login
+        document.getElementById('toggle-cadastro-btn').addEventListener('click', () => {
+            const isLogin = document.getElementById('cadastro-form').classList.contains('hidden');
+            document.getElementById('cadastro-form').classList.toggle('hidden', !isLogin);
+            document.getElementById('login-form').classList.toggle('hidden', isLogin);
+            document.getElementById('auth-title').textContent = isLogin ? 'Crie Sua Conta' : 'Entrar na Área do Cliente';
+            document.getElementById('toggle-cadastro-btn').textContent = isLogin ? 'Voltar para Login' : 'Cadastre-se Agora';
+        });
+
+        // Submissão de Login
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loginBtn = 'login-submit-btn';
+            setButtonLoading(loginBtn, true, 'Entrar');
+
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-senha').value;
+
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            
+            setButtonLoading(loginBtn, false, 'Entrar');
+
+            if (error) {
+                console.error("Erro de Login Supabase:", error); // Debug Log
+                showNotification(`Erro ao logar: ${error.message}`, 'error');
+                return;
+            }
+            
+            showNotification('Login realizado com sucesso!', 'success');
+            e.target.reset(); // Limpa o formulário
+            // onAuthStateChange cuidará da navegação
+        });
+
+        // Submissão de Cadastro (LÓGICA BLOQUEIO DE INSERÇÃO DE TUTOR)
+        document.getElementById('cadastro-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const cadastroBtn = 'cadastro-submit-btn';
+            const defaultText = 'Confirmar Cadastro';
+            setButtonLoading(cadastroBtn, true, defaultText); // Inicia o loading
+
+            const email = document.getElementById('cadastro-email').value;
+            const password = document.getElementById('cadastro-senha').value;
+            const nome = document.getElementById('cadastro-nome').value;
+            const cpf = document.getElementById('cadastro-cpf').value.replace(/\D/g, ''); // Remove caracteres não numéricos
+            const telefone = document.getElementById('cadastro-telefone').value;
+
+            // --- VALIDAÇÃO BÁSICA DE CAMPOS ---
+            if (password.length < 6) {
+                setButtonLoading(cadastroBtn, false, defaultText);
+                showNotification('A senha deve ter no mínimo 6 caracteres.', 'error');
+                return;
+            }
+            if (cpf.length !== 11) {
+                setButtonLoading(cadastroBtn, false, defaultText);
+                showNotification('O CPF deve conter exatamente 11 dígitos.', 'error');
+                return;
+            }
+            if (!nome || !email || !telefone) {
+                 setButtonLoading(cadastroBtn, false, defaultText);
+                showNotification('Por favor, preencha todos os campos obrigatórios.', 'error');
+                return;
+            }
+            // -----------------------------------
+
+            // 1. Criar usuário de autenticação
+            const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+            
+            if (authError) {
+                console.error("Erro de Cadastro (Auth) Supabase:", authError); // Debug Log
+                showNotification(`Erro no cadastro: ${authError.message}`, 'error');
+                setButtonLoading(cadastroBtn, false, defaultText); // Para o loading
+                return;
+            }
+
+            if (!authData || !authData.user) {
+                showNotification('Erro interno: Usuário não criado. Tente novamente.', 'error');
+                setButtonLoading(cadastroBtn, false, defaultText); // Para o loading
+                return;
+            }
+
+            // 2. Inserir dados do Tutor na tabela 'tutores'
+            const userId = authData.user.id;
+            const { error: dbError } = await supabase
+                .from('tutores')
+                .insert([{ id: userId, nome, cpf, telefone }]);
+            
+            if (dbError) {
+                // Erro 2: Inserção no DB Falhou (e.g., duplicidade de CPF/Telefone)
+                console.error("Erro de Inserção de Tutor (DB/RLS):", dbError); // Debug Log
+                
+                let errorMessage = `Erro Crítico: Não foi possível finalizar o cadastro.`;
+
+                // Tratar violação de chave duplicada (CPF ou Telefone)
+                if (dbError.code === '23505') {
+                    if (dbError.details && dbError.details.includes('cpf_key')) {
+                        errorMessage = 'Erro no Cadastro: O CPF fornecido já está registrado em nossa base.';
+                    } else if (dbError.details && dbError.details.includes('telefone_key')) {
+                        errorMessage = 'Erro no Cadastro: O Telefone fornecido já está registrado em nossa base.';
+                    } else {
+                         errorMessage = 'Erro no Cadastro: Um dos campos (CPF ou Telefone) já está em uso.';
+                    }
+                }
+                
+                // ⚠️ AÇÃO CRUCIAL: Deslogar o usuário para BLOQUEAR a entrada no Dashboard.
+                await supabase.auth.signOut();
+                
+                showNotification(errorMessage, 'error');
+                e.target.reset(); // Limpa o formulário e permanece na tela de autenticação
+                setButtonLoading(cadastroBtn, false, defaultText); // Para o loading
+                return; // Encerra a execução após o erro/logout
+            }
+
+            // SUCCESS PATH (Auth + DB 100%)
+            // CORREÇÃO: Popula tutorData localmente e atualiza a UI.
+            // Isso garante que o onAuthStateChange (que dispara async) tenha os dados completos.
+            tutorData = { id: userId, nome, cpf, telefone }; 
+            appIsReady = true; // Marca como pronto, pois os dados estão aqui.
+
+            showNotification('Cadastro realizado com sucesso! Você está logado.', 'success');
+            e.target.reset(); // Limpa o formulário
+            setButtonLoading(cadastroBtn, false, defaultText); // Para o loading
+
+            // Força a navegação e atualização da UI sem depender do listener assíncrono.
+            document.getElementById('tutor-nome-display').textContent = tutorData.nome.split(' ')[0];
+            navigateTo('dashboard-section');
+        });
+        
+        // Submissão de Conclusão de Cadastro
+        document.getElementById('complete-profile-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const completeBtn = 'complete-profile-submit-btn';
+            const defaultText = 'Finalizar Cadastro';
+            setButtonLoading(completeBtn, true, defaultText);
+            
+            const user = supabase.auth.currentUser;
+            if (!user) {
+                setButtonLoading(completeBtn, false, defaultText);
+                showNotification("Sua sessão expirou. Por favor, faça login novamente.", 'error');
+                navigateTo('auth-section');
+                return;
+            }
+
+            const nome = document.getElementById('complete-nome').value;
+            const cpf = document.getElementById('complete-cpf').value.replace(/\D/g, '');
+            const telefone = document.getElementById('complete-telefone').value;
+            const userId = user.id;
+
+            // Validação
+            if (cpf.length !== 11) {
+                setButtonLoading(completeBtn, false, defaultText);
+                showNotification('O CPF deve conter exatamente 11 dígitos.', 'error');
+                return;
+            }
+            if (!nome || !telefone) {
+                setButtonLoading(completeBtn, false, defaultText);
+                showNotification('Por favor, preencha todos os campos obrigatórios.', 'error');
+                return;
+            }
+            
+            // Inserção (usando insert com conflito para ser idempotente)
+            const { error: dbError } = await supabase
+                .from('tutores')
+                .insert([{ id: userId, nome, cpf, telefone }]);
+
+            setButtonLoading(completeBtn, false, defaultText);
+
+            if (dbError) {
+                console.error("Erro de Inserção de Tutor (Conclusão):", dbError); // Debug Log
+                
+                let errorMessage = `Erro ao finalizar cadastro: Não foi possível salvar seus dados.`;
+
+                // Tratar violação de chave duplicada (CPF ou Telefone)
+                if (dbError.code === '23505') {
+                    if (dbError.details && dbError.details.includes('cpf_key')) {
+                        errorMessage = 'Erro ao finalizar cadastro: O CPF fornecido já está em uso.';
+                    } else if (dbError.details && dbError.details.includes('telefone_key')) {
+                        errorMessage = 'Erro ao finalizar cadastro: O Telefone fornecido já está em uso.';
+                    } else {
+                         errorMessage = 'Erro ao finalizar cadastro: Um dos campos (CPF/Telefone) já está em uso.';
+                    }
+                }
+                
+                showNotification(errorMessage, 'error');
+                return; // Retorna aqui, mantendo o usuário na tela de conclusão de cadastro (com o erro visível)
+            }
+
+            // Sucesso
+            // Atualiza o estado local e a UI
+            tutorData = { id: userId, nome, cpf, telefone }; 
+            showNotification('Dados de cadastro atualizados com sucesso! Bem-vindo(a).', 'success');
+            e.target.reset();
+            updateDashboardDisplay(); // Remove a tela de incompletude
+        });
+
+        // --- LÓGICA DE EDIÇÃO DE PERFIL (NOVO) ---
+        
+        document.getElementById('show-edit-profile').addEventListener('click', () => {
+             if (!tutorData) {
+                showNotification("Erro: Dados do tutor não carregados. Impossível editar perfil.", 'error');
+                updateDashboardDisplay();
+                return;
+            }
+            
+            // Preenche o formulário com os dados atuais
+            const user = supabase.auth.currentUser;
+            document.getElementById('edit-nome').value = tutorData.nome || '';
+            document.getElementById('edit-cpf').value = tutorData.cpf || '';
+            document.getElementById('edit-telefone').value = tutorData.telefone || '';            
+            navigateTo('edit-profile-section');
+        });
+        
+        document.getElementById('back-to-dashboard-edit').addEventListener('click', () => navigateTo('dashboard-section'));
+
+
+        // Submissão de Edição de Perfil (UPDATE)
+        document.getElementById('edit-profile-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const editBtn = 'edit-profile-submit-btn';
+            const defaultText = 'Salvar Alterações';
+            setButtonLoading(editBtn, true, defaultText);
+
+            if (!tutorData || !tutorData.id) {
+                setButtonLoading(editBtn, false, defaultText);
+                showNotification("Erro: Dados do tutor não carregados. Impossível salvar.", 'error');
+                return;
+            }
+
+            const newNome = document.getElementById('edit-nome').value;
+            const newCpf = document.getElementById('edit-cpf').value.replace(/\D/g, '');
+            const newTelefone = document.getElementById('edit-telefone').value;
+
+            // Validação
+            if (newCpf.length !== 11) {
+                setButtonLoading(editBtn, false, defaultText);
+                showNotification('O CPF deve conter exatamente 11 dígitos.', 'error');
+                return;
+            }
+            if (!newNome || !newTelefone) {
+                setButtonLoading(editBtn, false, defaultText);
+                showNotification('Por favor, preencha todos os campos obrigatórios.', 'error');
+                return;
+            }
+            
+            // ATUALIZAÇÃO NO SUPABASE
+            const { error: dbError } = await supabase
+                .from('tutores')
+                .update({ nome: newNome, cpf: newCpf, telefone: newTelefone })
+                .eq('id', tutorData.id); // Garante que o usuário só edita o próprio perfil (Regra RLS)
+
+            setButtonLoading(editBtn, false, defaultText);
+
+            if (dbError) {
+                console.error("Erro ao atualizar perfil (DB/RLS):", dbError); // Debug Log
+                 
+                let errorMessage = `Erro ao salvar alterações: Não foi possível atualizar seus dados.`;
+                // Tratar violação de chave duplicada (CPF ou Telefone)
+                if (dbError.code === '23505') {
+                    if (dbError.details && dbError.details.includes('cpf_key')) {
+                        errorMessage = 'Erro ao salvar: O CPF fornecido já está em uso por outro usuário.';
+                    } else if (dbError.details && dbError.details.includes('telefone_key')) {
+                        errorMessage = 'Erro ao salvar: O Telefone fornecido já está em uso por outro usuário.';
+                    } else {
+                         errorMessage = 'Erro ao salvar: Um dos campos (CPF/Telefone) já está em uso.';
+                    }
+                }
+                
+                showNotification(errorMessage, 'error');
+                return;
+            }
+
+            // Sucesso: Atualiza o estado local e navega.
+            tutorData.nome = newNome;
+            tutorData.cpf = newCpf;
+            tutorData.telefone = newTelefone;
+            
+            // Atualiza o nome exibido no dashboard imediatamente
+            document.getElementById('tutor-nome-display').textContent = tutorData.nome.split(' ')[0];
+
+            showNotification('Seu perfil foi atualizado com sucesso!', 'success');
+            navigateTo('dashboard-section');
+        });
+        
+        // --- FIM DA LÓGICA DE EDIÇÃO DE PERFIL ---
+        
+        // --- LÓGICA DE GERENCIAR PETS (NOVO) ---
+        
+        document.getElementById('show-gerenciar-pets').addEventListener('click', () => {
+             if (!tutorData) {
+                showNotification("Dados do tutor incompletos. Por favor, complete seu cadastro primeiro.", 'error');
+                updateDashboardDisplay();
+                return;
+            }
+            navigateTo('gerenciar-pets-section');
+            loadTutorPets();
+        });
+        document.getElementById('back-to-dashboard-gerenciar').addEventListener('click', () => navigateTo('dashboard-section'));
+        
+        async function loadTutorPets() {
+            const container = document.getElementById('pets-list-container');
+            container.innerHTML = '<p class="text-gray-500">Carregando seus pets...</p>';
+            
+            if (!tutorData || !tutorData.id) {
+                container.innerHTML = `<p class="text-red-500">Erro: Dados do tutor não carregados.</p>`;
+                return;
+            }
+            
+            const { data: pets, error } = await supabase
+                .from('pets')
+                .select('*')
+                .eq('tutor_id', tutorData.id)
+                .order('nome', { ascending: true });
+
+            if (error) {
+                console.error("Erro ao carregar pets:", error); 
+                container.innerHTML = `<p class="text-red-500">Erro ao carregar pets: ${error.message}</p>`;
+                return;
+            }
+            
+            if (pets.length === 0) {
+                container.innerHTML = `<p class="text-gray-600 text-center p-4 bg-gray-50 rounded-lg">Você ainda não tem pets cadastrados.</p>`;
+                return;
+            }
+            
+            container.innerHTML = ''; // Limpa o loading
+            pets.forEach(pet => {
+                const petCard = document.createElement('div');
+                petCard.className = 'flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-white border border-pink-200 rounded-lg shadow-md';
+                petCard.innerHTML = `
+                    <div class="mb-3 sm:mb-0">
+                        <h3 class="text-xl font-bold text-pink-700">${pet.nome}</h3>
+                        <p class="text-sm text-gray-600">${pet.especie} (${pet.raca}) - Nasc.: ${new Date(pet.data_nascimento + 'T12:00:00Z').toLocaleDateString('pt-BR')}</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button data-pet-id="${pet.id}" data-pet-name="${pet.nome}" data-pet-especie="${pet.especie}" data-pet-raca="${pet.raca}" data-pet-nascimento="${pet.data_nascimento}" class="edit-pet-btn py-1 px-3 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition duration-150">
+                            Editar
+                        </button>
+                        <button data-pet-id="${pet.id}" data-pet-name="${pet.nome}" class="delete-pet-btn py-1 px-3 bg-red-500 text-white rounded-md text-sm hover:bg-red-600 transition duration-150">
+                            Excluir
+                        </button>
+                    </div>
+                `;
+                container.appendChild(petCard);
+            });
+            
+            // Adiciona listeners para os novos botões
+            document.querySelectorAll('.edit-pet-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => showEditPet(e.target.dataset));
+            });
+            document.querySelectorAll('.delete-pet-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => excluirPet(e.target.dataset.petId, e.target.dataset.petName));
+            });
+        }
+        
+        function showEditPet(petData) {
+            // Configura o formulário para EDIÇÃO
+            document.getElementById('pet-form-title').textContent = `Editar Pet: ${petData.petName}`;
+            document.getElementById('cadastro-pet-form').reset(); // Limpa o formulário
+            
+            // Preenche os campos para edição
+            document.getElementById('pet-id-edit').value = petData.petId;
+            document.getElementById('pet-nome').value = petData.petName;
+            document.getElementById('pet-especie').value = petData.petEspecie;
+            // O campo data_nascimento não deve ser editável, mas pode ser exibido
+            document.getElementById('pet-nascimento').value = petData.petNascimento;
+            
+            // Esconde o campo de nascimento na edição
+            document.getElementById('pet-nascimento-container').classList.add('hidden'); 
+            
+            // Dispara o evento change para popular as raças
+            const especieSelect = document.getElementById('pet-especie');
+            especieSelect.dispatchEvent(new Event('change'));
+            
+            // Aguarda um ciclo para que as raças sejam carregadas e, então, seleciona a raça correta
+            setTimeout(() => {
+                document.getElementById('pet-raca').value = petData.petRaca;
+            }, 50);
+
+            document.getElementById('cadastro-pet-submit-btn').textContent = 'Salvar Alterações';
+            navigateTo('cadastro-pet-section');
+        }
+
+        async function excluirPet(petId, petName) {
+             const isConfirmed = await showConfirmationModal(`Tem certeza que deseja excluir o pet ${petName}? Todas as consultas serão mantidas, mas o pet será removido da sua lista.`);
+
+            if (!isConfirmed) {
+                return;
+            }
+
+            const { error } = await supabase
+                .from('pets')
+                .delete()
+                .eq('id', petId)
+                .eq('tutor_id', tutorData.id); // RLS garante que só pode excluir o próprio pet
+
+            if (error) {
+                console.error("Erro ao excluir pet:", error);
+                showNotification(`Erro ao excluir ${petName}: ${error.message}.`, 'error');
+                return;
+            }
+
+            showNotification(`${petName} excluído com sucesso.`, 'success');
+            loadTutorPets(); // Recarrega a lista
+        }
+        
+        // --- FIM DA LÓGICA DE GERENCIAR PETS ---
+
+        // --- LÓGICA DE CADASTRO PET (AJUSTADA PARA REUTILIZAÇÃO) ---
+
+        document.getElementById('show-cadastro-pet').addEventListener('click', () => {
+            if (!tutorData) {
+                showNotification("Dados do tutor incompletos. Por favor, complete seu cadastro primeiro.", 'error');
+                updateDashboardDisplay();
+                return;
+            }
+            
+            // Configura o formulário para CADASTRO
+            document.getElementById('pet-form-title').textContent = `Cadastro de Pet`;
+            document.getElementById('cadastro-pet-form').reset();
+            document.getElementById('pet-id-edit').value = ''; // Limpa o ID para garantir que seja INSERT
+            document.getElementById('pet-nascimento-container').classList.remove('hidden'); // Mostra o campo de nascimento
+            document.getElementById('cadastro-pet-submit-btn').textContent = 'Salvar Pet';
+            navigateTo('cadastro-pet-section');
+        });
+        // Botão na tela de gerenciar pets
+        document.getElementById('show-cadastro-pet-from-gerenciar').addEventListener('click', () => {
+            document.getElementById('show-cadastro-pet').click(); // Reutiliza a lógica
+        });
+
+        document.getElementById('back-to-dashboard-pet').addEventListener('click', () => {
+             // Retorna para a tela de onde veio
+            if (document.getElementById('pet-id-edit').value) {
+                navigateTo('gerenciar-pets-section'); // Se estava editando, volta para a lista de pets
+            } else {
+                navigateTo('dashboard-section');
+            }
+        });
+
+        const racasPorEspecie = {
+            'Cachorro': ['Vira-Lata', 'Poodle', 'Labrador', 'Shih Tzu', 'Bulldog Francês', 'Outra'],
+            'Gato': ['SRD (Sem Raça Definida)', 'Siamês', 'Persa', 'Maine Coon', 'Ragdoll', 'Outra'],
+            'Pássaro': ['Calopsita', 'Periquito', 'Canário', 'Agapornis', 'Outra'],
+            'Roedor': ['Hamster Sírio', 'Porquinho-da-Índia', 'Gerbil', 'Outra']
+        };
+
+        document.getElementById('pet-especie').addEventListener('change', (e) => {
+            const especie = e.target.value;
+            const racaSelect = document.getElementById('pet-raca');
+            racaSelect.innerHTML = '<option value="">Selecione a Raça</option>';
+
+            if (racasPorEspecie[especie]) {
+                racasPorEspecie[especie].forEach(raca => {
+                    const option = document.createElement('option');
+                    option.value = raca;
+                    option.textContent = raca;
+                    racaSelect.appendChild(option);
+                });
+            } else {
+                racaSelect.innerHTML = '<option value="">Nenhuma raça disponível para esta espécie</option>';
+            }
+        });
+
+        document.getElementById('cadastro-pet-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!tutorData || !tutorData.id) {
+                showNotification("Erro: Dados do tutor não carregados. Impossível salvar pet.", 'error');
+                return;
+            }
+
+            const petId = document.getElementById('pet-id-edit').value;
+            const isEditing = !!petId;
+            const defaultText = isEditing ? 'Salvar Alterações' : 'Salvar Pet';
+            setButtonLoading('cadastro-pet-submit-btn', true, defaultText);
+            
+            const petData = {
+                nome: document.getElementById('pet-nome').value,
+                especie: document.getElementById('pet-especie').value,
+                raca: document.getElementById('pet-raca').value
+            };
+            
+            let error;
+
+            if (isEditing) {
+                // Lógica de EDIÇÃO
+                const { error: updateError } = await supabase
+                    .from('pets')
+                    .update(petData)
+                    .eq('id', petId)
+                    .eq('tutor_id', tutorData.id); 
+                error = updateError;
+            } else {
+                // Lógica de CADASTRO
+                petData.tutor_id = tutorData.id;
+                petData.data_nascimento = document.getElementById('pet-nascimento').value;
+                const { error: insertError } = await supabase.from('pets').insert([petData]);
+                error = insertError;
+            }
+            
+            setButtonLoading('cadastro-pet-submit-btn', false, defaultText);
+
+            if (error) {
+                console.error(`Erro ao ${isEditing ? 'editar' : 'cadastrar'} pet:`, error); // Debug Log
+                showNotification(`Erro ao ${isEditing ? 'editar' : 'cadastrar'} pet: ${error.message}`, 'error');
+                return;
+            }
+
+            showNotification(`${petData.nome} ${isEditing ? 'editado' : 'cadastrado'} com sucesso!`, 'success');
+            document.getElementById('cadastro-pet-form').reset();
+            
+            if (isEditing) {
+                navigateTo('gerenciar-pets-section');
+                loadTutorPets(); // Recarrega a lista
+            } else {
+                navigateTo('dashboard-section');
+            }
+        });
+
+        // --- FIM DA LÓGICA DE CADASTRO PET ---
+
+        // --- LÓGICA DE AGENDAMENTO ---
+
+        document.getElementById('show-agendar-consulta').addEventListener('click', async () => {
+             if (!tutorData) {
+                showNotification("Dados do tutor incompletos. Por favor, complete seu cadastro primeiro.", 'error');
+                updateDashboardDisplay();
+                return;
+            }
+            navigateTo('agendar-consulta-section');
+            loadEspecialidadesForAgenda();
+            loadPetsForAgenda();
+        });
+        document.getElementById('back-to-dashboard-agenda').addEventListener('click', () => navigateTo('dashboard-section'));
+
+
+        async function loadMedicos() {
+            const { data, error } = await supabase
+                .from('medicos')
+                .select('*');
+            if (error) {
+                console.error("Erro ao carregar médicos:", error);
+                return;
+            }
+            allMedicos = data;
+        }
+
+        async function loadEspecialidadesForAgenda() {
+            const select = document.getElementById('agendar-especialidade');
+            select.innerHTML = '<option value="">Selecione a Especialidade</option>';
+
+            if (!allEspecialidades.length) {
+                const { data, error } = await supabase.from('especialidades').select('*');
+                if (error) { console.error("Erro ao carregar especialidades:", error); return; }
+                allEspecialidades = data;
+            }
+
+            allEspecialidades.forEach(esp => {
+                const option = document.createElement('option');
+                option.value = esp.id;
+                option.textContent = esp.nome;
+                option.dataset.valor = esp.valor;
+                select.appendChild(option);
+            });
+        }
+
+        async function loadPetsForAgenda() {
+            const container = document.getElementById('pets-options-container');
+            container.innerHTML = '';
+            
+            if (!tutorData || !tutorData.id) {
+                container.innerHTML = `<p class="text-red-500">Erro: Dados do tutor não carregados.</p>`;
+                document.getElementById('agendamento-form-container').classList.add('hidden');
+                return;
+            }
+
+            const { data: pets, error } = await supabase
+                .from('pets')
+                .select('*')
+                .eq('tutor_id', tutorData.id);
+
+            if (error) {
+                console.error("Erro ao carregar pets:", error); // Debug Log
+                container.innerHTML = `<p class="text-red-500">Erro ao carregar pets: ${error.message}</p>`;
+                return;
+            }
+
+            if (pets.length === 0) {
+                container.innerHTML = `<p class="text-gray-500">Você ainda não tem pets cadastrados. Por favor, cadastre um pet primeiro.</p>`;
+                document.getElementById('agendamento-form-container').classList.add('hidden');
+                return;
+            }
+
+            pets.forEach(pet => {
+                const petCard = document.createElement('div');
+                petCard.className = 'flex justify-between items-center p-3 bg-white border border-gray-200 rounded-md shadow-sm';
+                petCard.innerHTML = `
+                    <span class="font-medium text-gray-800">${pet.nome} (${pet.especie})</span>
+                    <button data-pet-id="${pet.id}" data-pet-name="${pet.nome}" class="select-pet-btn py-1 px-3 bg-green-500 text-white rounded-md text-sm hover:bg-green-600">
+                        Agendar Consulta
+                    </button>
+                `;
+                container.appendChild(petCard);
+            });
+
+            document.querySelectorAll('.select-pet-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const petId = e.target.dataset.petId;
+                    const petName = e.target.dataset.petName;
+                    document.getElementById('selected-pet-id').value = petId;
+                    showNotification(`Agendando consulta para ${petName}.`, 'success');
+                    document.getElementById('agendamento-form-container').classList.remove('hidden');
+                });
+            });
+        }
+
+        // Lógica para preencher horários baseada na data/especialidade
+        document.getElementById('agendar-data').addEventListener('change', () => updateAvailableHours());
+        document.getElementById('agendar-especialidade').addEventListener('change', (e) => {
+            updateAvailableHours();
+            // Atualiza o valor da consulta
+            const selectedOption = e.target.options[e.target.selectedIndex];
+            const valor = selectedOption.dataset.valor ? parseFloat(selectedOption.dataset.valor) : 0.00;
+            document.getElementById('valor-consulta-display').textContent = `Valor da Consulta: R$ ${valor.toFixed(2).replace('.', ',')}`;
+        });
+
+        async function updateAvailableHours() {
+            const dataInput = document.getElementById('agendar-data');
+            const dataConsulta = dataInput.value;
+            const horaSelect = document.getElementById('agendar-hora');
+            const especialidadeId = document.getElementById('agendar-especialidade').value;
+
+            horaSelect.innerHTML = '<option value="">Carregando Horários...</option>';
+
+            if (!dataConsulta || !especialidadeId) {
+                horaSelect.innerHTML = '<option value="">Selecione a Data e Especialidade</option>';
+                return;
+            }
+            
+            // NOVO: Verifica se a data selecionada é anterior à data atual
+            const todayString = getCurrentDateString();
+            if (dataConsulta < todayString) {
+                dataInput.value = ''; // Limpa a data inválida
+                horaSelect.innerHTML = '<option value="">Data anterior à data atual.</option>';
+                showNotification('Não é possível agendar consultas em dias passados.', 'error');
+                return;
+            }
+
+            const dataObj = new Date(dataConsulta + 'T00:00:00'); // Garante que a data seja tratada como local
+            const dayOfWeek = dataObj.getDay();
+
+            // Bloqueia Domingo (0)
+            if (dayOfWeek === 0) {
+                dataInput.value = '';
+                horaSelect.innerHTML = '<option value="">Clínica fechada aos Domingos</option>';
+                showNotification('Não agendamos consultas aos Domingos.', 'error');
+                return;
+            }
+
+            // Pega consultas já agendadas para o dia e especialidade
+            const { data: agendamentosExistentes, error } = await supabase
+                .from('consultas')
+                .select('hora_consulta')
+                .eq('data_consulta', dataConsulta)
+                .neq('status', 3); // Exclui consultas finalizadas
+
+            if (error) {
+                console.error("Erro ao verificar agendamentos:", error); // Debug Log
+                horaSelect.innerHTML = '<option value="">Erro ao carregar horários</option>';
+                return;
+            }
+
+            const horasOcupadas = new Set(agendamentosExistentes.map(a => a.hora_consulta));
+            const horariosDisponiveis = [];
+
+            // Lógica para filtrar horários passados SE a data for hoje
+            const isToday = dataConsulta === todayString;
+            // Pega a hora atual + 1 para garantir que a consulta seja no futuro (duração de 1h)
+            const currentHour = isToday ? new Date().getHours() + 1 : -1; 
+
+            // Intervalo de 06:00h às 20:00h, com passo de 1h
+            for (let h = 6; h <= 19; h++) {
+                const horaString = `${h.toString().padStart(2, '0')}:00:00`;
+                const hour = h;
+
+                // NOVO: Verifica se o horário já passou ou é o horário atual (bloqueia o horário corrente)
+                if (isToday && hour < currentHour) { 
+                    continue; // Pula horários passados ou o horário atual (ex: se são 18:30, 18h é pulado)
+                }
+                
+                if (!horasOcupadas.has(horaString)) {
+                    horariosDisponiveis.push(horaString);
+                }
+            }
+
+            horaSelect.innerHTML = '';
+            horaSelect.innerHTML = '<option value="">Selecione um Horário</option>';
+            horariosDisponiveis.forEach(hora => {
+                const option = document.createElement('option');
+                option.value = hora;
+                option.textContent = hora.substring(0, 5) + 'h';
+                horaSelect.appendChild(option);
+            });
+
+            if (horariosDisponiveis.length === 0) {
+                horaSelect.innerHTML = '<option value="">Nenhum horário disponível neste dia</option>';
+            }
+        }
+
+        // Submissão do Agendamento
+        document.getElementById('agendamento-consulta-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const petId = document.getElementById('selected-pet-id').value;
+            const especialidadeId = document.getElementById('agendar-especialidade').value;
+            const dataConsulta = document.getElementById('agendar-data').value;
+            const horaConsulta = document.getElementById('agendar-hora').value;
+
+            if (!petId || !especialidadeId || !dataConsulta || !horaConsulta) {
+                showNotification('Por favor, preencha todos os campos.', 'error');
+                return;
+            }
+            
+            // VALIDAÇÃO FINAL DE DATA/HORA CONTRA O MOMENTO ATUAL
+            // Converte para objeto Date para comparação
+            const selectedDateTime = new Date(`${dataConsulta}T${horaConsulta}`);
+            const now = new Date();
+
+            if (selectedDateTime <= now) {
+                showNotification('Não é possível agendar consultas em datas ou horários que já passaram. Por favor, selecione um horário futuro.', 'error');
+                return;
+            }
+            // FIM DA VALIDAÇÃO
+
+            const selectedEspecialidade = allEspecialidades.find(e => e.id == especialidadeId);
+            const valorConsulta = selectedEspecialidade ? selectedEspecialidade.valor : 0.00;
+            const valorFormatado = valorConsulta.toFixed(2).replace('.', ',');
+
+            // 1. Usa o Modal de Confirmação
+            const confirmationMessage = `O valor da consulta para ${selectedEspecialidade.nome} é de R$ ${valorFormatado}. Deseja confirmar o agendamento?`;
+            const isConfirmed = await showConfirmationModal(confirmationMessage);
+
+            if (!isConfirmed) {
+                return;
+            }
+
+            // 2. Selecionar um médico aleatório da especialidade (simples)
+            const medicosEspecialidade = allMedicos.filter(m => m.especialidade_id == especialidadeId);
+            if (medicosEspecialidade.length === 0) {
+                showNotification('Nenhum médico disponível para esta especialidade.', 'error');
+                return;
+            }
+            const medicoId = medicosEspecialidade[Math.floor(Math.random() * medicosEspecialidade.length)].id;
+
+            // 3. Inserir Agendamento
+            const agendamentoData = {
+                pet_id: petId,
+                medico_id: medicoId,
+                especialidade_id: especialidadeId,
+                data_consulta: dataConsulta,
+                hora_consulta: horaConsulta,
+                tutor_id: tutorData.id,
+                status: 1 // Agendada
+            };
+
+            const { error } = await supabase.from('consultas').insert([agendamentoData]);
+
+            if (error) {
+                console.error("Erro no agendamento:", error); // Debug Log
+                showNotification(`Erro no agendamento: Horário já ocupado ou erro de servidor. ${error.message}`, 'error');
+                return;
+            }
+
+            showNotification('Consulta agendada com sucesso!', 'success');
+            document.getElementById('agendamento-consulta-form').reset();
+            document.getElementById('agendamento-form-container').classList.add('hidden');
+            navigateTo('dashboard-section');
+        });
+
+        // --- LÓGICA DE HISTÓRICO ---
+
+        document.getElementById('show-historico').addEventListener('click', async () => {
+            if (!tutorData) {
+                showNotification("Dados do tutor incompletos. Por favor, complete seu cadastro primeiro.", 'error');
+                updateDashboardDisplay();
+                return;
+            }
+            navigateTo('historico-section');
+            await loadHistoricoConsultas();
+        });
+        document.getElementById('back-to-dashboard-historico').addEventListener('click', () => navigateTo('dashboard-section'));
+
+        /**
+         * Cancela uma consulta agendada pelo ID.
+         * Esta função é crucial para o RLS de DELETE funcionar.
+         * @param {string} consultaId - ID da consulta a ser cancelada.
+         */
+        async function cancelarConsulta(consultaId) {
+            const petName = document.querySelector(`#card-consulta-${consultaId} h3`).textContent.split('(')[0].trim();
+            const isConfirmed = await showConfirmationModal(`Tem certeza que deseja cancelar a consulta para o(a) pet ${petName}? Esta ação não pode ser desfeita.`);
+
+            if (!isConfirmed) {
+                return;
+            }
+
+            const { error } = await supabase
+                .from('consultas')
+                .delete()
+                .eq('id', consultaId);
+            
+            if (error) {
+                console.error("Erro ao cancelar consulta:", error);
+                showNotification(`Erro ao cancelar consulta: ${error.message}. Tente novamente.`, 'error');
+                return;
+            }
+
+            showNotification('Consulta cancelada com sucesso.', 'success');
+            // Recarrega a lista para sumir com o card deletado
+            await loadHistoricoConsultas(); 
+        }
+
+        async function loadHistoricoConsultas() {
+            const container = document.getElementById('historico-list');
+            // Loading mais robusto para evitar piscar
+            if(container.children.length === 0 || container.innerHTML.includes('Carregando')) {
+                 container.innerHTML = '<div class="flex justify-center"><svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>';
+            }
+
+            if (!tutorData || !tutorData.id) {
+                container.innerHTML = `<p class="text-red-500">Erro: Dados do tutor não carregados.</p>`;
+                return;
+            }
+
+            // Busca consultas e faz JOIN com Pets, Médicos e Especialidades
+            const { data: consultas, error } = await supabase
+                .from('consultas')
+                .select(`
+                    id, data_consulta, hora_consulta, status,
+                    pets (nome, especie),
+                    medicos (nome),
+                    especialidades (nome)
+                `)
+                .eq('tutor_id', tutorData.id)
+                .order('data_consulta', { ascending: false })
+                .order('hora_consulta', { ascending: false });
+
+            if (error) {
+                console.error("Erro ao carregar histórico:", error); // Debug Log
+                container.innerHTML = `<p class="text-red-500">Erro ao carregar histórico: ${error.message}</p>`;
+                return;
+            }
+
+            if (consultas.length === 0) {
+                container.innerHTML = `<p class="text-gray-500 text-center py-4" id="no-consultas-msg">Você não possui consultas registradas.</p>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            consultas.forEach(consulta => {
+                const statusMap = { 1: 'Agendada', 2: 'Em Atendimento', 3: 'Finalizada' };
+                let borderClass = 'border-indigo-500 bg-indigo-50';
+                let statusClass = 'bg-blue-100 text-blue-800';
+                
+                let actionButtons = '';
+
+                // Define as cores e botões baseados no status
+                if (consulta.status === 3) {
+                    borderClass = 'border-green-500 bg-white';
+                    statusClass = 'bg-green-100 text-green-800';
+                    actionButtons = `<button data-consulta-id="${consulta.id}" class="view-report-btn mt-3 py-1 px-3 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700 transition shadow-sm">Visualizar Relatório</button>`;
+                } else if (consulta.status === 2) {
+                    borderClass = 'border-yellow-500 bg-yellow-50';
+                    statusClass = 'bg-yellow-100 text-yellow-800';
+                    actionButtons = `<p class="mt-3 text-sm text-gray-500 italic">Em atendimento...</p>`;
+                } else { // status 1: Agendada
+                    // statusClass já é blue
+                    actionButtons = `<button data-cancel-id="${consulta.id}" class="cancel-appt-btn mt-3 py-1 px-3 bg-red-500 text-white rounded-md text-sm hover:bg-red-600 transition shadow-sm flex items-center"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> Cancelar Consulta</button>`;
+                }
+
+
+                // --- LINHA CORRIGIDA AQUI: FIX DE FUSO HORÁRIO (T12:00:00Z) ---
+                // Adiciona 'T12:00:00Z' para que o navegador interprete a data como meio-dia UTC
+                // Isso impede que o fuso horário local a puxe para o dia anterior (meia-noite).
+                const dataFormatada = new Date(`${consulta.data_consulta}T12:00:00Z`).toLocaleDateString('pt-BR');
+
+                const consultaCard = document.createElement('div');
+                consultaCard.id = `card-consulta-${consulta.id}`;
+                consultaCard.className = `p-4 rounded-lg shadow-md border-l-4 ${borderClass} hover:shadow-lg transition duration-200`;
+                consultaCard.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">${dataFormatada} às ${consulta.hora_consulta.substring(0, 5)}h</p>
+                            <h3 class="text-xl font-bold text-gray-800 mt-1">${consulta.pets.nome} <span class="text-sm font-normal text-gray-600">(${consulta.pets.especie})</span></h3>
+                            <p class="text-gray-700 mt-1"><span class="font-medium">Especialidade:</span> ${consulta.especialidades.nome}</p>
+                            <p class="text-gray-700"><span class="font-medium">Vet:</span> ${consulta.medicos.nome}</p>
+                        </div>
+                        <span class="text-xs font-bold px-2 py-1 rounded-full ${statusClass}">
+                            ${statusMap[consulta.status]}
+                        </span>
+                    </div>
+                    <div class="mt-2 border-t pt-2 border-gray-200/50">
+                        ${actionButtons}
+                    </div>
+                `;
+                container.appendChild(consultaCard);
+            });
+
+            document.querySelectorAll('.view-report-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => showRelatorioModal(e.target.dataset.consultaId));
+            });
+            
+            // NOVO: Adiciona listener para o botão de cancelar consulta
+            document.querySelectorAll('.cancel-appt-btn').forEach(btn => {
+                // Usa closest('button') para garantir que o evento pegue o data-cancel-id do botão pai, mesmo clicando no SVG
+                btn.addEventListener('click', (e) => cancelarConsulta(e.target.closest('button').dataset.cancelId));
+            });
+        }
+
+        async function showRelatorioModal(consultaId) {
+            const modal = document.getElementById('relatorio-modal');
+            const content = document.getElementById('relatorio-content');
+            content.textContent = 'Carregando relatório...';
+
+            // Busca o relatório pelo consulta_id
+            const { data, error } = await supabase
+                .from('relatorios')
+                .select('relatorio')
+                .eq('consulta_id', consultaId)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                console.error("Erro ao carregar relatório:", error); // Debug Log
+                content.textContent = `Erro ao carregar relatório: ${error.message}`;
+            } else if (data) {
+                content.textContent = data.relatorio;
+            } else {
+                content.textContent = 'O relatório para esta consulta ainda não foi registrado pelo veterinário.';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        document.getElementById('close-relatorio-modal').addEventListener('click', () => {
+            document.getElementById('relatorio-modal').classList.add('hidden');
+        });
+
+        // Inicialização
+// Localização: Final do Script (Por volta da linha 810)
+document.addEventListener('DOMContentLoaded', async () => {
+    
+    // 1. Mostrar loading e iniciar carregamento de dados públicos
+    navigateTo('loading-section'); 
+    loadEspecialidades();
+    loadMedicos(); 
+    setMinDate(); 
+    startHeartbeat(); 
+
+    // 2. O PONTO MAIS CRÍTICO: ESPERAR a sessão ser restaurada (do localStorage)
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+        // 3. Sessão restaurada. Agora carregue os DADOS do usuário.
+        await loadTutorData(session.user.id);
+        
+        // 4. Navegue para o Dashboard (o loadTutorData já cuida da tela de "Cadastro Incompleto" internamente)
+        document.getElementById('tutor-nome-display').textContent = tutorData ? tutorData.nome.split(' ')[0] : 'Cliente';
+        updateNavButtons(true);
+        navigateTo('dashboard-section');
+
+    } else {
+        // 5. Nenhuma sessão. Navegue para a Home.
+        navigateTo('home-section');
+    }
+    
+    // Marca o aplicativo como pronto após a navegação inicial ter sido resolvida
+    // Isso evita que o onAuthStateChange cause um "flicker" logo após este bloco
+    appIsReady = true; 
+});
+    </script>
+</body>
+</html>
